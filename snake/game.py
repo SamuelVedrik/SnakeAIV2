@@ -94,11 +94,16 @@ class TrainingSnake(BaseSnake):
 
     def calculate_reward(self, has_eaten: bool):
         
-        reward = -0.1
+        reward = 0
         if has_eaten:
-            reward += 0.6
-        if self.game_over:
-            reward -= 10
+            reward = 1
+        elif self.game_over:
+            reward = -2
+        else:
+            headx, heady = self.snake.get_head()
+            foodx, foody = self.food
+            # reward if move closer to food
+            reward = max(1 - 0.05*(abs(headx - foodx) + abs(heady - foody)), 0)
         return reward
     
     def get_curr_state(self):
