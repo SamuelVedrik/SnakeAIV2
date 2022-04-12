@@ -85,7 +85,7 @@ class SnakeAI():
         torch.save(self.policy_net.state_dict(), save_path)
     
     def load_policy_net(self, load_path):
-        self.policy_net.load_state_dict(torch.load(load_path))
+        self.policy_net.load_state_dict(torch.load(load_path, map_location = self.device))
         
     def get_action(self, state, epsilon):
         """
