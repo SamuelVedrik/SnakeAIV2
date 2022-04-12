@@ -14,7 +14,7 @@ def train(model: SnakeAI, buffer: ExperienceBuffer, sample_size, criterion, opti
     Q_curr = Q_curr[torch.arange(sample_size), action.long()] # Only take the Q of the action we took.
     Q_next = Q_next.max(dim=1)[0] # Take the best action
     
-    loss = criterion(Q_curr, reward + (model.gamma * Q_next))
+    loss = criterion(Q_curr, reward.to(model.device) + (model.gamma * Q_next))
     
     optimizer.zero_grad()
     loss.backward()
@@ -56,19 +56,24 @@ def training_loop(episodes):
         game = TrainingSnake()
         curr_state = game.get_curr_state()
         total_game_reward = 0
+        lifespan = 0
         while not game.game_over:
             action = model.get_action(process_state(curr_state), epsilon)
             reward, next_state = game.step(Direction(action.item()))
             buffer.collect((process_state(curr_state), action, reward, process_state(next_state)))
-            step += 1
+            step = (step + 1) % 128
             total_game_reward += reward
-            if step % 128 == 0:
+            lifespan += 1
+            if step == 0:
                 for _ in range(4):
                     train(model, buffer, 16, criterion, optimizer)
         
         all_rewards.append(total_game_reward)
         if episode % 100 == 0: 
-            print(f"Current reward: {total_game_reward}")
+            print(f"Current reward: {total_game_reward} | Current Lifespan: {lifespan}")
+            model.save_policy_net("./snake_ai.pth")
+
+        epsilon = max(epsilon - 1e-3, 1e-2)
 
     model.save_policy_net("./snake_ai.pth")
     
