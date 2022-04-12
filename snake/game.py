@@ -1,6 +1,8 @@
 from collections import namedtuple
 import numpy as np
 from .utils import Direction, SnakeBody
+from model.model import SnakeAI
+import torch
 
 
 class BaseSnake:
@@ -108,10 +110,9 @@ class PlayableSnake(BaseSnake):
     
     def __init__(self, board_x: int, board_y: int):
         super().__init__(board_x, board_y)
-        import pygame
-        from pygame import Color
     
     def draw_board(self):
+        
         self.game_window.fill(Color("black"))
         for snake_x, snake_y in self.snake.snake_body:
             pygame.draw.rect(self.game_window, Color("green"), pygame.Rect(snake_x*10, snake_y*10, 10, 10))
@@ -164,13 +165,70 @@ class PlayableSnake(BaseSnake):
         if self.game_over:
             print(f"You died! Final score: {self.score}")
             
+class AIPlayingSnake(PlayableSnake):
+    
+    def __init__(self, *args, model_path, **kwargs):
+        super().__init__(*args, **kwargs)
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.model = SnakeAI(device)
+        self.model.load_policy_net(model_path)
+        
+    def get_curr_state(self):
+        state_dir = torch.zeros((4,))
+        state_dir[self.snake.direction.value] = 1
+        state_board = torch.FloatTensor(self.board.copy()).unsqueeze(0)
+        
+        return (state_board.to(self.model.device), state_dir.to(self.model.device))
+    
+    def check_events(self):
+        running = True
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                running = False
+            # Whenever a key is pressed down
+            elif event.type == pygame.KEYDOWN:
+                # Esc -> Create event to quit the game
+                if event.key == pygame.K_ESCAPE:
+                    pygame.event.post(pygame.event.Event(pygame.QUIT))
+        return running
+        
+    
+    def main_loop(self):
+        pygame.init()
+        pygame.display.set_caption('Snake Eater')
+        self.game_window = pygame.display.set_mode((self.board_x*10, self.board_y*10))
+        self.fps_controller = pygame.time.Clock()
+        
+        running = True
+        while running:
+            direction = Direction(self.model.get_action(self.get_curr_state(), epsilon=-1).item())
+            print(direction)
+            running = self.check_events()
+            self.step(direction)
+            self.draw_board()
+            # Refresh game screen
+            pygame.display.update()
+            # Refresh rate
+            self.fps_controller.tick(1)
+            
+            # check game over state
+            if self.game_over:
+                running = False
+        
+        if self.game_over:
+            print(f"You died! Final score: {self.score}")
+    
+    
 def main():
-    game = PlayableSnake(72, 48)
+    # game = PlayableSnake(72, 48)
+    game = AIPlayingSnake(board_x=72, board_y=48, model_path="./snake_ai.pth")
     game.main_loop()
     
             
 if __name__ == "__main__":
-
+    import pygame
+    from pygame import Color
     main()
     # Profiling code
     # import cProfile
