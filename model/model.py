@@ -71,8 +71,9 @@ class SimpleFCSnake(nn.Module):
         )
     
     def forward(self, boards, directions):
-        board_flat = torch.flatten(boards, dim=1)
-        x = torch.cat([board_flat, directions])
+        
+        board_flat = torch.flatten(boards, start_dim=1)
+        x = torch.cat([board_flat, directions], dim=1)
         return self.net(x)
         
 class SnakeAI():
@@ -93,7 +94,7 @@ class SnakeAI():
         return Q_curr, Q_next
 
     def update_target_net(self):
-        if self.step % 5 == 0:
+        if self.step % 10 == 0:
             self.target_net.load_state_dict(self.policy_net.state_dict())
     
     def update_step(self):
@@ -126,10 +127,13 @@ class SnakeAI():
 class ExperienceBuffer():
     
     def __init__(self, buffer_size):
-        self.buffer = deque(maxlen=buffer_size)
+        self.buffer = []
+        self.buffer_size = buffer_size
     
     def collect(self, experience):
         self.buffer.append(experience)
+        if len(self.buffer) > self.buffer_size:
+            self.buffer.pop(0)
     
     def sample_from_experience(self, sample_size):
         if len(self.buffer) < sample_size:
