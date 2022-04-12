@@ -55,13 +55,31 @@ class ResNetSnake(nn.Module):
         x = torch.cat([x, directions], dim=1)
         
         return self.fc(x)
-        
+
+class SimpleFCSnake(nn.Module):
+    
+    def __init__(self):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Linear(28*28 + 4, 128),
+            nn.ReLU(),
+            nn.BatchNorm1d(128),
+            nn.Linear(128, 64),
+            nn.ReLU(),
+            nn.BatchNorm1d(64),
+            nn.Linear(64, 4)
+        )
+    
+    def forward(self, boards, directions):
+        board_flat = torch.flatten(boards, dim=1)
+        x = torch.cat([board_flat, directions])
+        return self.net(x)
         
 class SnakeAI():
-    def __init__(self, device):
+    def __init__(self, device, model_class=ResNetSnake):
         self.device = device
-        self.policy_net = ResNetSnake().to(device)
-        self.target_net = ResNetSnake().to(device)
+        self.policy_net = model_class().to(device)
+        self.target_net = model_class().to(device)
         self.target_net.load_state_dict(self.policy_net.state_dict())
         self.step = 0
         self.gamma = 0.95
