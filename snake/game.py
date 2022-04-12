@@ -28,7 +28,7 @@ class BaseSnake:
     
     def _update_food_pos(self):
         valid_locations = np.transpose(np.nonzero(self.board != 1))
-        rand_ind = np.random.choice(valid_locations.shape[0], size=1)
+        rand_ind = np.random.choice(valid_locations.shape[0])
         self.food = (valid_locations[rand_ind, 1], valid_locations[rand_ind, 0])
         
     def _update_food_board(self):
