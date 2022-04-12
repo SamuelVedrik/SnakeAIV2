@@ -98,7 +98,7 @@ class SnakeAI():
         state_dir = state_dir.unsqueeze(0)
         self.policy_net.eval()
         with torch.no_grad():   
-            Q_curr = self.policy_net(state_board, state_dir)
+            Q_curr = self.policy_net(state_board.to(self.device), state_dir.to(self.device))
             
         self.policy_net.train()
         random_value = torch.rand(1)
